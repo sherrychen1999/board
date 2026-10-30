@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>擇木專案進度</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column of project cards; each card = name, stacked stage bar, priority + report controls, foldable work items */
+:root{
+  --bg:#f5f6f1; --surface:#ffffff; --fg:#1c2920; --muted:#5d6a61; --line:#dde3da;
+  --s0:#e6eae3; --s1:#a9cdb7; --s2:#5f9f7d; --s3:#2b6248;
+  --accent:#2b6248; --accent-soft:#e1eee6; --gold:#9c7119; --gold-soft:#f5ebd5; --hi:#b5462b; --hi-soft:#f6e3dc;
+  --f-display:"Noto Serif TC","Songti TC",serif; --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121915; --surface:#1a231e; --fg:#e5ebe6; --muted:#98a69d; --line:#2b372f;
+  --s0:#26312a; --s1:#355e48; --s2:#4f9a73; --s3:#8fd3ad;
+  --accent:#8fd3ad; --accent-soft:#20352a; --gold:#e2b75e; --gold-soft:#3a3020; --hi:#f0957a; --hi-soft:#3d2620; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121915; --surface:#1a231e; --fg:#e5ebe6; --muted:#98a69d; --line:#2b372f;
+  --s0:#26312a; --s1:#355e48; --s2:#4f9a73; --s3:#8fd3ad;
+  --accent:#8fd3ad; --accent-soft:#20352a; --gold:#e2b75e; --gold-soft:#3a3020; --hi:#f0957a; --hi-soft:#3d2620; color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:900px;margin:0 auto;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--f-display);font-size:1.8rem;margin:0}
+.lede{color:var(--muted);margin:.3rem 0 0;max-width:60ch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;font-size:.82rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+.status{margin-top:10px;font-size:.82rem;color:var(--muted)}
+.agenda{margin-top:18px;padding:14px 16px;border-radius:10px;background:var(--hi-soft)}
+.agenda h2{font-family:var(--f-display);font-size:1rem;margin:0 0 4px;color:var(--hi)}
+.agenda ol{margin:0;padding-left:1.3em}
+.agenda .empty{color:var(--muted);font-size:.9rem}
+.group{margin-top:28px}
+.group>h2{font-family:var(--f-display);font-size:1.1rem;margin:0 0 10px;display:flex;gap:10px;align-items:baseline}
+.group>h2 small{font-family:var(--f-body);font-size:.8rem;color:var(--muted);font-weight:400}
+.cards{display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;min-width:0}
+.card.rep{border-color:var(--hi)}
+.head{display:grid;grid-template-columns:1fr auto;gap:2px 16px;align-items:start}
+.name{font-weight:700;font-size:1.05rem;text-wrap:balance}
+.star{font-size:.72rem;font-weight:700;color:var(--gold);background:var(--gold-soft);padding:1px 8px;border-radius:999px;margin-left:6px;white-space:nowrap;vertical-align:2px}
+.lead{font-size:.82rem;color:var(--muted)}
+.pct{font-family:var(--f-display);font-size:1.9rem;line-height:1;text-align:right;font-variant-numeric:tabular-nums;grid-row:1/3;grid-column:2}
+.pct small{font-size:.9rem;color:var(--muted)}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s0);margin:12px 0 6px;gap:2px}
+.bar{position:relative}.bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--s2);border-radius:7px}
+.counts{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted)}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.85rem;border:0;background:transparent;color:var(--fg);padding:5px 14px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface);font-weight:700}
+.seg button:disabled{cursor:not-allowed;opacity:.6}
+.lbl{font-size:.8rem;color:var(--muted);margin-right:6px}
+.rep-tog{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer}
+.rep-tog input{width:18px;height:18px;accent-color:var(--hi);margin:0}
+details{margin-top:10px}
+summary{cursor:pointer;font-size:.85rem;color:var(--accent);font-weight:500}
+.rows{margin-top:12px;display:grid;gap:0}
+.r{display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto;gap:2px 10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
+.r .no{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);min-width:1.6em;text-align:right;align-self:center}
+.r .no b{display:inline-flex;align-items:center;justify-content:center;width:1.5em;height:1.5em;border-radius:50%;border:1px solid var(--line);color:var(--fg);font-weight:500}
+.r .h{font:inherit;border:0;background:transparent;color:var(--muted);cursor:grab;touch-action:none;padding:2px 4px;font-size:1rem;line-height:1;align-self:center;border-radius:4px}
+.r .h:hover{color:var(--fg);background:var(--bg)}
+.r.dragging{background:var(--accent-soft);box-shadow:0 4px 14px rgba(0,0,0,.12);position:relative;z-index:2;border-radius:6px}
+.r.dragging .h{cursor:grabbing}
+.nb{font:inherit;font-family:var(--f-mono);font-size:.72rem;width:1.5em;height:1.5em;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;padding:0}
+.nb.par{border-style:dashed;color:var(--accent)}
+.nb:hover{border-color:var(--accent)}
+.sep[data-key]{user-select:none}
+.sep{font-size:.75rem;color:var(--muted);padding:10px 0 2px;border-top:1px solid var(--line)}
+.pre{font-size:.8rem;color:var(--accent);margin-top:2px}
+.r .dot{width:10px;height:10px;border-radius:50%;display:inline-block;align-self:center}
+.r .lab{min-width:0}
+.op{font-size:.72rem;color:var(--muted);margin-left:6px;white-space:nowrap}
+.tl{list-style:none;margin:3px 0 0;padding:0 0 0 10px;border-left:2px solid var(--line);display:grid;gap:2px}
+.tl li{font-size:.8rem;color:var(--muted);line-height:1.5}
+.tl li.new{color:var(--fg);font-size:.85rem}
+.tl time{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl .w{font-size:.72rem;color:var(--muted);margin-left:6px}
+.tl .k{font-size:.7rem;font-weight:700;padding:0 6px;border-radius:4px;margin-right:4px;background:var(--accent-soft);color:var(--accent)}
+.tl .k-卡關,.tl .k-狀態{background:var(--hi-soft);color:var(--hi)}
+.r .lab em.none{opacity:.6}
+.r .lab em{font-style:normal;font-size:.8rem;color:var(--muted);display:block}
+.r .who{font-size:.82rem;text-align:right;white-space:nowrap}
+.r .who b{font-weight:700}
+.r .who span{color:var(--muted);display:block;font-size:.75rem}
+.r .stg{font-size:.72rem;color:var(--muted)}
+.r.s0 .dot{background:var(--s0);box-shadow:inset 0 0 0 1px var(--muted)}.r.s1 .dot{background:var(--s1)}.r.s2 .dot{background:var(--s2)}.r.s3 .dot{background:var(--s3)}
+.r.todo .who b{color:var(--hi)}
+.pp{display:flex;gap:8px;grid-column:1/-1}.pp input{flex:1;min-width:0;width:auto}
+@media (max-width:600px){.r{grid-template-columns:auto auto auto minmax(0,1fr)}.r .who{grid-column:4;text-align:left;white-space:normal}.r .who span{display:inline;margin-left:6px}}
+.item{display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.item:last-child{border-bottom:0}
+.item .t{min-width:0}
+.item .code{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);margin-left:6px}
+.steps{display:inline-flex;gap:3px}
+.steps button{font:inherit;font-size:.75rem;padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.steps button.on{color:var(--surface);border-color:transparent}
+.steps button.on.s0{background:var(--muted)}.steps button.on.s1{background:var(--s1);color:var(--fg)}.steps button.on.s2{background:var(--s2)}.steps button.on.s3{background:var(--s3)}
+.steps button:disabled{cursor:not-allowed}
+.note{grid-column:1/-1;width:100%;box-sizing:border-box;font:inherit;font-size:.85rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 9px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:600px){.item{grid-template-columns:1fr}.pct{font-size:1.5rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<h1>擇木專案進度</h1>
+<p class="lede">擇木雙週會的案子收攏成 13 個專案，只看進度、不列期限。執行長在每個專案設定輕重緩急，並勾選下次會議想聽的報告；每次進度與收到紀錄都取自 EIP，最新在最上面（括號為更新日期），同仁照常在 EIP 回報即可。每項列主責與協助，看得出卡在誰；編號是做事順序，同號可同時進行，按住 ⠿ 拖曳可調整順序，點編號可設為與上一步同時。</p>
+<div class="legend"><span><i style="background:var(--s0)"></i>待籌備</span><span><i style="background:var(--s1)"></i>進行中</span><span><i style="background:var(--s2)"></i>待確認</span><span><i style="background:var(--s3)"></i>已落實</span></div>
+<div class="status" id="status">正在連線…</div>
+<div class="agenda"><h2>下次會議要報告</h2><div id="agenda"></div></div>
+<div id="board"></div>
+</div>
+<script>
+const P=[{"id": "P01", "name": "晚安對策（甘好睡寶）改名與新配方", "star": 1, "lead": "陳心驊", "items": [["MZ1151028-01", "更名上線、好元氣改早安對策、早晚套組", 1, "", "陳心驊", "陳季嫻", "MZ1151028-01", 1, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1151028-01a", "晚安對策產品頁 GEO", 0, "", "陳慶霖", "陳心驊", "MZ1151028-01a", 2, []], ["MZ1151028-02", "新配方打樣", 0, "", "陳季嫻", "蕭捷健", "MZ1151028-02", 0, [["10/30", "陳季嫻", "收到", "收到"]]]]}, {"id": "P02", "name": "產品頁改版與 GEO", "star": 1, "lead": "陳季嫻", "items": [["MZ1151028-03", "整理全品項有效劑量", 0, "", "陳季嫻", "", "MZ1151028-03", 1, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1150916-03", "商品頁改為說明書形式", 1, "", "邱文亭", "陳季嫻", "MZ1150916-03", 2, [["10/26", "邱文亭", "進度", "設計師 10/22 已提供初稿，目前正在微調內容，預計 10/28 會上傳至line群組。"], ["10/19", "陳季嫻", "進度", "課程套組3款已完成更新"], ["10/13", "邱文亭", "進度", "已提供AI模擬圖與文案給設計師，預計10/22提供設計檔"], ["9/29", "陳季嫻、邱文亭", "收到", "收到"]]], ["MZ1151028-03a", "全品項產品頁 GEO（先做膠囊）", 0, "", "陳慶霖", "陳季嫻", "MZ1151028-03a", 3, [["10/30", "陳季嫻", "收到", "收到"]]]]}, {"id": "P03", "name": "實體通路主打品（防蚊液、麩醯胺酸、洗髮精）", "star": 1, "lead": "陳季嫻、陳心驊", "items": [["MZ1151028-11", "麩醯胺酸院區推廣", 1, "", "陳季嫻", "鄭欣玫、莊諮錡", "MZ1151028-11", 0, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1151028-10", "洗髮精銷售", 0, "", "陳心驊", "陳季嫻", "MZ1151028-10", 0, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1151028-09", "防蚊液實體通路主打（含仿單）", 0, "", "陳心驊", "陳季嫻", "MZ1151028-09", 0, [["10/30", "陳季嫻", "收到", "收到"]]]], "pre": "三項互不相依，依上市時間排列"}, {"id": "P04", "name": "三日中碳第二屆與套組改版", "star": 1, "lead": "陳季嫻", "items": [["", "文案（活動頁、社群預告）", 1, "", "陳季嫻", "待指定", "P04-copy", 1, []], ["", "文宣（活動視覺、院區宣傳）", 2, "", "陳季嫻", "待指定", "P04-print", 2, []], ["", "官網後台設置（關關團購頁、折價券、贈品口味）", 2, "", "陳季嫻", "待指定", "P04-web", 2, []], ["", "IT（集點卡機器人抓連續發文、LINE 領獎）", 1, "", "陳季嫻", "待指定", "P04-it", 2, []], ["MZ1150930-03", "套組改版（3 日、六日套組）", 0, "", "陳季嫻", "劉季華、邱文亭", "MZ1150930-03", 3, [["10/1–10/2", "陳季嫻、邱文亭、劉季華", "收到", "收到"]]]], "ref": "MZ1150930-01"}, {"id": "P05", "name": "口罩包裝改版", "star": 1, "lead": "邱文亭", "items": [["MZ1151014-10", "包裝轉向高質感、信任感", 1, "", "邱文亭", "", "MZ1151014-10", 0, [["10/26", "邱文亭", "進度", "設計師調整中"]]]]}, {"id": "P06", "name": "減重櫃檯人力（面試 → 到職 → 考核）", "star": 1, "lead": "陳季嫻", "items": [["MZ1150916-42a", "面試評估機制", 1, "", "陳季嫻", "莊諮錡、鄭欣玫", "MZ1150916-42a", 1, [["10/30", "會議紀錄", "進度", "（1151028 會議紀錄）新增：面試題目與評分方式、到職後關懷問卷完成。"]]], ["MZ1150916-42", "招募進度", 1, "", "陳季嫻", "", "MZ1150916-42", 2, [["10/27", "陳季嫻", "進度", "10/22 三樹新進櫃檯到職一天，10/24 提離職；土城錄取 1 位 11/6 到職、於三樹院區訓練。三樹持續招募。"], ["10/19", "陳季嫻", "進度", "10/19 面試2位土城櫃檯，錄取1位預計11/6入職，三樹院區訓練"], ["10/13", "陳季嫻", "進度", "10/12 面試 1 位，預計 10/20 入職"], ["10/11", "陳季嫻", "進度", "三樹櫃檯：10/1-10/11 共面試 3 位（約 5 位，1 位取消，1 位改期至 10/12），其中 1 位 10/8 已簽約，預計 11/15 入職（待上份工作交接完畢）。"], ["10/1", "陳季嫻", "進度", "三樹 1 位需離開崗位 3 個月，已開始邀約其他面試。"], ["9/29", "陳季嫻", "進度", "土城新櫃檯 1 位實習兩天後另有工作、已離職；三樹 1 位留職停薪 1 個月"]]], ["N1151008-16", "櫃台工作守則（SOP）", 1, "", "陳季嫻", "", "N1151008-16", 3, [["10/12", "陳季嫻", "收到", "收到"]]], ["MZ1151014-16", "考核要點與實習分流帶領", 1, "", "陳季嫻", "", "MZ1151014-16", 4, [["10/17", "陳季嫻", "收到", "收到"]]]]}, {"id": "P07", "name": "採購、庫存與品質", "star": 0, "lead": "陳季嫻、陳慶霖", "items": [["MZ1151014-11c", "每月銷量、庫存、效期報告", 1, "", "陳季嫻", "", "MZ1151014-11c", 1, [["10/27", "陳季嫻", "進度", "10/26「擇木庫存警示」儀表板建置完成：依各通路近 6 個月銷量（近 3 個月加權）算出可賣月數、叫貨點、建議叫貨量；已記入在途與絕版品項。目前待叫貨 3 項（田園玉米、碳水對策 1000 粒、好元氣 1000 粒）、效期警示 10 批。待跑完一個月度後產出第一份月報。"], ["10/18", "陳季嫻", "收到", "收到"]]], ["MZ1151014-11a", "庫存管理 SOP", 1, "", "陳季嫻", "", "MZ1151014-11a", 1, [["10/27", "陳季嫻", "進度", "10/26 初版完成：精簡為 5 個流程（倉儲只做要碰到貨的事，其他交給 AI 或系統），附決策行動圖、保管規則（濕度 50–60%，超過 65% 開除濕機）、成效檢核指標。配套系統：出庫小工具（各平台出貨自動換算 ERP 代碼）、院區 LINE 叫貨自動開單、入庫功能已完成；叫貨機器人待三樹群組 ID 測試，出入庫串接 ERP 待接收入口。尚未實際運行，暫不送驗收。"], ["10/18", "陳季嫻", "收到", "收到"]]], ["MZ1151014-11b", "近效期銷貨 SOP", 1, "", "陳季嫻", "", "MZ1151014-11b", 2, [["10/27", "陳季嫻", "進度", "10/26 庫存警示儀表板已可抓出近效期批次：目前效期警示 10 批，最急為草莓品項（2027/1 到期）。近效期風險分級（消化天數 vs 可售期）與出清流程 SOP 撰寫中。"], ["10/18", "陳季嫻", "收到", "收到"]]], ["MZ1151028-04", "低庫存 3 項請購", 1, "", "陳季嫻", "", "MZ1151028-04", 2, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1151014-11", "銷量預測 → 生產 → 庫存（S&OP）", 1, "", "陳慶霖", "陳季嫻", "MZ1151014-11", 3, [["10/17", "陳慶霖", "收到", "收到"]]], ["MZ1151014-18", "540g 瓶裝蛋白飲是否續產", 1, "", "陳季嫻", "", "MZ1151014-18", 4, [["10/17", "陳季嫻", "收到", "收到"]]], ["MZ1150916-21", "抹茶蛋白棒：廠商收回並重交", 1, "", "陳季嫻", "陳慶霖", "MZ1150916-21", 0, [["9/29", "陳季嫻", "進度", "待窗口與上級主管確認後續處理事宜"]]]]}, {"id": "P08", "name": "高庫存與近效期去化", "star": 0, "lead": "陳季嫻", "items": [["MZ1151028-07", "草莓大豆棒院區改送一盒", 1, "", "陳季嫻", "", "MZ1151028-07", 0, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1151014-04", "多件折扣與院區折扣", 1, "", "陳季嫻", "邱文亭、柯孟君、陳心驊", "MZ1151014-04", 0, [["10/27", "陳季嫻", "進度", "10/27 甘好睡寶院區第二件 8 折 10/28 起開跑（至 12/31），已確認 7 院區參與、5 院區待確認（詳 M1151007-13）。"], ["10/17", "陳季嫻", "收到", "收到"]]], ["MZ1151028-05", "燕麥奶、爆米香排序往前＋銷量冠軍", 0, "", "陳季嫻", "", "MZ1151028-05", 0, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1150916-24", "花生湯集中三樹銷售", 1, "", "陳季嫻", "", "MZ1150916-24", 0, [["10/7", "陳季嫻", "進度", "花生湯10/10前會於各院區調回三樹、土城銷售"], ["9/29", "陳季嫻", "收到", "收到"]]], ["MZ1150930-15", "中秋禮盒成效 → 新年禮盒", 0, "", "陳季嫻", "", "MZ1150930-15", 0, [["10/1", "陳季嫻", "收到", "收到"]]]], "pre": "前置：「採購、庫存與品質」的每月銷量／庫存／效期報告，提供高庫存與近效期清單"}, {"id": "P09", "name": "官網改版", "star": 0, "lead": "陳季嫻", "items": [["MZ1150930-05", "售價改「一天多少」、預設兩件、加購", 1, "", "陳季嫻", "", "MZ1150930-05", 0, [["10/1", "陳季嫻", "收到", "收到"]]], ["MZ1150916-08", "紅利折抵 11/15 關閉", 1, "", "陳季嫻", "", "MZ1150916-08", 0, [["9/29", "陳季嫻", "進度", "紅利商城已關閉，點數已停止發放"]]], ["MZ1150916-43", "首頁小測驗改版", 1, "", "陳季嫻", "", "MZ1150916-43", 0, [["10/30", "陳季嫻", "狀態", "會議未確認完成，改回進行中（1151028 會議）"], ["10/27", "陳季嫻", "回報完成", "首頁 MBTI 測驗欄目已完成上線，可上網試玩"], ["9/29", "陳季嫻", "收到", "收到"]]]]}, {"id": "P10", "name": "LINE 會員與回購", "star": 0, "lead": "陳季嫻、陳慶霖", "items": [["MZ1150930-07", "回購通知串接", 1, "", "陳慶霖", "陳季嫻", "MZ1150930-07", 1, [["10/13", "陳慶霖", "進度", "已取得provider下的channel帳號，經過測試可推播；現在進度要維護各商品的推播週期以及測試"], ["10/11", "陳慶霖", "卡關", "需由搜博開放現provider的channel才能於擇木良食體重管理官方LINE推播回購通知"], ["10/1", "陳季嫻", "收到", "收到"]]], ["MZ1150930-06", "綁定一鍵化＋折扣碼", 1, "", "陳慶霖", "陳季嫻、林志威", "MZ1150930-06", 1, [["10/1", "陳季嫻", "收到", "收到"]]], ["MZ1151014-03", "每商品購買週期設定", 1, "", "陳慶霖", "陳季嫻", "MZ1151014-03", 2, [["10/17", "陳季嫻", "收到", "收到"]]], ["MZ1151028-12", "LINE 帳號搬家配套", 0, "", "陳季嫻", "陳慶霖、林志威", "MZ1151028-12", 0, [["10/30", "陳季嫻", "收到", "收到"]]]]}, {"id": "P11", "name": "社團經營（導流、集點、KOL）", "star": 0, "lead": "邱文亭、陳心驊", "items": [["MZ1150930-10", "社團集點新制", 1, "", "陳心驊", "陳季嫻", "MZ1150930-10", 0, [["10/20", "陳季嫻", "進度", "已完成初版集點卡與流程"], ["10/11", "陳季嫻", "進度", "提案已放上，待會議定流程與贈品。"], ["10/7", "陳季嫻", "進度", "已提案（附連結）"], ["10/1", "陳季嫻、陳心驊", "收到", "收到"]]], ["MZ1151014-08", "KOL 合作合約", 1, "", "陳心驊", "陳季嫻、陳慶霖", "MZ1151014-08", 0, [["10/30", "陳季嫻", "狀態", "會議未確認完成，改回進行中（1151028 會議）"], ["10/26", "陳心驊", "回報完成", "合約已提供給三位學員，2位有意願，1位婉拒。目前合約回收1份，預計11月開始進行"], ["10/17", "陳季嫻", "收到", "收到"]]], ["MZ1150916-13", "社團導流", 1, "", "邱文亭", "陳季嫻", "MZ1150916-13", 0, [["10/19", "邱文亭", "進度", "社團已於9/16開放。社團簡介有加入三日中碳餐購買連結。"], ["10/11", "陳季嫻", "進度", "社團無法投遞廣告，改以三日中碳挑戰第二屆進行導流。"], ["9/29", "陳季嫻、邱文亭、陳心驊", "收到", "收到"]]], ["MZ1150930-12", "回放清單與每日主題", 1, "", "邱文亭", "陳心驊", "MZ1150930-12", 0, [["10/2", "邱文亭、陳心驊", "收到", "收到"]]]]}, {"id": "P12", "name": "新通路與合作", "star": 0, "lead": "陳季嫻", "items": [["MZ1150916-35", "外部診所通路合作與分潤", 2, "", "陳季嫻", "", "MZ1150916-35", 0, [["10/25", "陳季嫻", "進度", "10/21初版提案提交執行長確認"], ["9/29", "陳季嫻", "收到", "收到"]]], ["MZ1150916-41", "法鼓山減重講座", 1, "", "陳季嫻", "", "MZ1150916-41", 0, [["10/8", "陳季嫻", "進度", "已製作完畢並提供意願評估的宣傳單張給法師使用"], ["10/1", "陳季嫻", "進度", "10/1協助製作法鼓山內部宣傳文宣，待確認法師參與意願後，接續洽談。"], ["9/29", "陳季嫻", "進度", "9/24追蹤，無回覆"]]], ["MZ1150916-20", "小檸檬安鋅鎂院區販售", 1, "", "陳季嫻", "", "MZ1150916-20", 0, [["10/27", "陳季嫻", "進度", "10/26 確認小檸檬安鋅鎂（ZMA）院區售價，僅盒裝販售，預計 11 月上市；已詢問院長進貨意願。"], ["9/29", "陳季嫻", "收到", "收到"]]]]}, {"id": "P13", "name": "內部制度與院區複製", "star": 0, "lead": "陳季嫻、林志威", "items": [["MZ1151028-14", "ERP 新增「待籌備」「待確認」", 0, "", "林志威", "陳季嫻", "MZ1151028-14", 1, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1151028-06", "執行長專案看板＋LINE 回報", 1, "", "陳季嫻", "林志威", "MZ1151028-06", 2, [["10/30", "陳季嫻", "收到", "收到"]]], ["MZ1151014-13", "高額激勵方案", 1, "", "陳季嫻", "", "MZ1151014-13", 0, [["10/17", "陳季嫻", "收到", "收到"]]], ["MZ1151028-13", "好院區做法整理複製", 0, "", "陳季嫻", "鄭欣玫", "MZ1151028-13", 0, [["10/30", "陳季嫻", "收到", "收到"]]]]}];
+const STEPS=["待籌備","進行中","待確認","已落實"];
+const PRIO=[["hi","先做"],["mid","接著"],["lo","之後"]];
+const GROUPS=[["hi","先做","執行長排為最優先"],["mid","接著",""],["lo","之後",""],["","尚未排序","等執行長設定輕重緩急；★ 為 1028 會議點名項目"]];
+const items={},projs={};let db=null,ro=true;
+const key=(p,i)=>p.items[i][6];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const st=(p,i)=>{const k=key(p,i);return items[k]&&typeof items[k].stage==="number"?items[k].stage:p.items[i][2]};
+const fld=(p,i,f,d)=>{const k=key(p,i);return items[k]&&typeof items[k][f]==="string"?items[k][f]:d};
+const own=(p,i)=>fld(p,i,"owner",p.items[i][4]),hlp=(p,i)=>fld(p,i,"help",p.items[i][5]);
+const full=(p,i)=>({stage:st(p,i),note:nt(p,i),owner:own(p,i),help:hlp(p,i)});
+const nt=(p,i)=>{const k=key(p,i);return items[k]&&typeof items[k].note==="string"?items[k].note:p.items[i][3]};
+const OPEN_FIX={"MZ1150916-42a":"10/28"};
+const opened=c=>{if(OPEN_FIX[c])return `<span class="op">立案 ${OPEN_FIX[c]}</span>`;const m=/^[A-Z]+1\d\d(\d\d)(\d\d)/.exec(c||"");return m?`<span class="op">立案 ${+m[1]}/${+m[2]}</span>`:""};
+function hist(H){if(!H||!H.length)return `<em class="none">EIP 尚無進度</em>`;
+  return `<ul class="tl">${H.map((e,j)=>{const [d,w,k,t]=e;const body=k==="收到"?`${esc(w)} 已收到`:`${k==="進度"?"":`<span class="k k-${k}">${k}</span>`}${esc(t)}<span class="w">${esc(w)}</span>`;return `<li${j===0?' class="new"':""}>${body}<time>（${d}）</time></li>`}).join("")}</ul>`}
+function layout(p){
+  const idx={};p.items.forEach((it,i)=>idx[key(p,i)]=i);const all=Object.keys(idx);
+  const pr=projs[p.id]||{};let order;
+  if(Array.isArray(pr.order)){order=pr.order.filter(k=>k==="|"||k in idx);order=[...new Set(order)];if(!order.includes("|"))order.push("|");for(const k of all)if(!order.includes(k))order.push(k)}
+  else{order=[...p.items.filter(x=>x[7]>0).map(x=>x[6]),"|",...p.items.filter(x=>!x[7]).map(x=>x[6])]}
+  let par;if(Array.isArray(pr.par))par=new Set(pr.par);else{par=new Set();let prev=null;for(const it of p.items){if(it[7]>0){if(prev&&prev[7]===it[7])par.add(it[6]);prev=it}}}
+  const cut=order.indexOf("|"),dep=order.slice(0,cut),ind=order.slice(cut+1),num={};let n=0;dep.forEach((k,j)=>{if(!(j>0&&par.has(k)))n++;num[k]=n});
+  return {idx,order,dep,ind,par,num};
+}
+let dragging=null,pending=false;
+function card(p){
+  const n=p.items.length,c=[0,0,0,0];p.items.forEach((_,i)=>c[st(p,i)]++);
+  const pct=Math.round(p.items.reduce((a,_,i)=>a+st(p,i),0)/(3*n)*100);
+  const pr=projs[p.id]||{};const rep=!!pr.report;
+  let h=`<article class="card${rep?" rep":""}"><div class="head"><div class="name">${esc(p.name)}${p.star?'<span class="star">★ 會中點名</span>':""}</div><div class="pct">${pct}<small>%</small></div><div class="lead">主責 ${esc(p.lead)}${p.ref?`　<span style="font-family:var(--f-mono);font-size:.72rem">${p.ref}</span>`:""}${p.pre?`<div class="pre">${esc(p.pre)}</div>`:""}</div></div>`;
+  h+=`<div class="bar" role="img" aria-label="已落實 ${c[3]}、待確認 ${c[2]}、進行中 ${c[1]}、待籌備 ${c[0]}">`;
+  h+=`<span class="fill" style="width:${pct}%"></span>`;
+  h+=`</div><div class="counts">${[3,2,1,0].filter(s=>c[s]).map(s=>`${STEPS[s]} ${c[s]}`).join("　")}</div>`;
+  const L=layout(p),mix=L.dep.length&&L.ind.length;
+  h+=`<div class="rows" data-p="${p.id}">${L.order.map(k=>{if(k==="|")return (mix||!ro)?`<div class="sep" data-key="|">${ro?"其他（與上面步驟不相依）":"⋯ 以上依序進行・以下不相依（可拖曳跨線）⋯"}</div>`:"";const i=L.idx[k],it=p.items[i],s=st(p,i),o=own(p,i),hp=hlp(p,i),n=nt(p,i),no=L.num[k];const badge=no?(!ro&&L.dep[0]!==k?`<button type="button" class="nb${L.par.has(k)?" par":""}" data-par="${k}" data-pid="${p.id}" title="${L.par.has(k)?"與上一步同時；點一下改成下一步":"點一下：與上一步同時進行"}">${no}</button>`:`<b title="第 ${no} 步">${no}</b>`):"";return `<div class="r s${s}${o==="待指定"?" todo":""}" data-key="${k}">${ro?"<span></span>":`<button type="button" class="h" data-drag="${k}" aria-label="拖曳或用上下鍵調整順序">⠿</button>`}<span class="no">${badge}</span><i class="dot" title="${STEPS[s]}"></i><div class="lab">${esc(it[1])} <span class="stg">${STEPS[s]}</span>${opened(it[0])}${hist(it[8])}</div><div class="who">主責 <b>${esc(o)}</b>${hp?`<span>協助 ${esc(hp)}</span>`:""}</div></div>`}).join("")}</div>`;
+  h+=`<div class="ctrl"><span><span class="lbl">輕重緩急</span><span class="seg">${PRIO.map(([v,l])=>`<button type="button" data-prio="${v}" data-p="${p.id}" aria-pressed="${pr.prio===v}" ${ro?"disabled":""}>${l}</button>`).join("")}</span></span><label class="rep-tog"><input type="checkbox" id="r-${p.id}" data-rep="${p.id}" ${rep?"checked":""} ${ro?"disabled":""}>下次會議想聽報告</label></div>`;
+  return h+"</article>";
+}
+const openSet=new Set();
+function render(){
+  if(dragging){pending=true;return}
+  const ae=document.activeElement&&document.activeElement.id;
+  document.querySelectorAll("details[data-d]").forEach(d=>{d.open?openSet.add(d.dataset.d):openSet.delete(d.dataset.d)});
+  let h="";
+  for(const [g,label,sub] of GROUPS){const ps=P.filter(p=>((projs[p.id]||{}).prio||"")===g);if(!ps.length)continue;
+    h+=`<section class="group"><h2>${label}<small>${ps.length} 個專案${sub?"　"+sub:""}</small></h2><div class="cards">${ps.map(card).join("")}</div></section>`;}
+  document.getElementById("board").innerHTML=h;
+  const r=P.filter(p=>(projs[p.id]||{}).report);
+  document.getElementById("agenda").innerHTML=r.length?`<ol>${r.map(p=>`<li>${esc(p.name)}</li>`).join("")}</ol>`:'<div class="empty">執行長還沒勾選。勾選「下次會議想聽報告」的專案會列在這裡，負責同仁照此準備。</div>';
+  if(ae){const el=document.getElementById(ae);if(el)el.focus()}
+}
+function say(t){document.getElementById("status").textContent=t}
+const API="https://script.google.com/macros/s/AKfycby_lPD-KfdBJFp7zy1o6t05lNQnMyFsqVQWLAjCMV2i6wTra1XwHD3Xlp5Q7TrL9W2urg/exec";
+async function save(path,data){const id=path.split("/")[1];const p=P.find(x=>x.id===id);try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({id,name:p?p.name:"",data})});const j=await r.json();if(!j.ok)throw new Error(j.error||"save");say("已儲存。")}catch(e){say("沒有存到，請稍後再試。");throw e}}
+
+async function saveOrder(pid,order,par){const cur=projs[pid]||{};const nx={...cur,order,par:[...par],at:new Date().toISOString()};const old=projs[pid];projs[pid]=nx;render();try{await save("projects/"+pid,nx)}catch(_){projs[pid]=old;render()}}
+function domOrder(c){return [...c.children].map(x=>x.dataset.key).filter(Boolean)}
+document.addEventListener("pointerdown",e=>{const hd=e.target.closest(".h");if(!hd||!db)return;e.preventDefault();const row=hd.closest(".r"),c=row.parentElement;dragging={row,c,pid:c.dataset.p,start:domOrder(c).join()};row.classList.add("dragging");try{hd.setPointerCapture(e.pointerId)}catch(_){}});
+document.addEventListener("pointermove",e=>{if(!dragging)return;const {row,c}=dragging;const sibs=[...c.children].filter(x=>x!==row&&x.dataset.key);for(const s of sibs){const r=s.getBoundingClientRect();if(e.clientY<r.top+r.height/2){if(row.nextElementSibling!==s)c.insertBefore(row,s);return}}if(c.lastElementChild!==row)c.appendChild(row)});
+async function endDrag(){if(!dragging)return;const {row,c,pid,start}=dragging;row.classList.remove("dragging");dragging=null;const o=domOrder(c);if(o.join()!==start){const p=P.find(x=>x.id===pid);await saveOrder(pid,o,layout(p).par)}else if(pending){pending=false;render()}if(pending){pending=false;render()}}
+document.addEventListener("pointerup",endDrag);document.addEventListener("pointercancel",endDrag);
+document.addEventListener("keydown",async e=>{const hd=e.target.closest&&e.target.closest(".h");if(!hd||!db||(e.key!=="ArrowUp"&&e.key!=="ArrowDown"))return;e.preventDefault();const row=hd.closest(".r"),c=row.parentElement,pid=c.dataset.p,o=domOrder(c),k=row.dataset.key,j=o.indexOf(k),t=e.key==="ArrowUp"?j-1:j+1;if(t<0||t>=o.length)return;[o[j],o[t]]=[o[t],o[j]];const p=P.find(x=>x.id===pid);await saveOrder(pid,o,layout(p).par);const el=document.querySelector(`.h[data-drag="${k}"]`);if(el)el.focus()});
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b||!db)return;
+  if(b.dataset.par){const p=P.find(x=>x.id===b.dataset.pid),L=layout(p),k=b.dataset.par;L.par.has(k)?L.par.delete(k):L.par.add(k);await saveOrder(p.id,L.order,L.par);return}
+  if(b.dataset.prio!==undefined){const id=b.dataset.p,cur=projs[id]||{};const v=cur.prio===b.dataset.prio?"":b.dataset.prio;const nx={...cur,prio:v,at:new Date().toISOString()};const old=projs[id];projs[id]=nx;render();try{await save("projects/"+id,nx)}catch(_){projs[id]=old;render()}}
+  else if(b.dataset.k){const k=b.dataset.k,cur=items[k]||{};const p=P.find(p=>p.items.some((_,i)=>key(p,i)===k));const i=p.items.findIndex((_,i)=>key(p,i)===k);const nx={...full(p,i),stage:+b.dataset.s,at:new Date().toISOString()};const old=items[k];items[k]=nx;render();try{await save("items/"+k,nx)}catch(_){items[k]=old;render()}}});
+document.addEventListener("change",async e=>{const t=e.target;if(!db)return;
+  if(t.dataset.rep){const id=t.dataset.rep,cur=projs[id]||{};const nx={...cur,report:t.checked,at:new Date().toISOString()};const old=projs[id];projs[id]=nx;render();try{await save("projects/"+id,nx)}catch(_){projs[id]=old;render()}}
+  else if(t.dataset.note||t.dataset.own||t.dataset.help){const k=t.dataset.note||t.dataset.own||t.dataset.help;const f=t.dataset.note?"note":t.dataset.own?"owner":"help";const p=P.find(p=>p.items.some((_,i)=>key(p,i)===k));const i=p.items.findIndex((_,i)=>key(p,i)===k);const cur=full(p,i);const v=t.value.trim();if(v===cur[f])return;const nx={...cur,[f]:v,at:new Date().toISOString()};const old=items[k];items[k]=nx;render();try{await save("items/"+k,nx)}catch(_){items[k]=old;render()}}});
+render();
+async function load(first){if(dragging)return;try{const r=await fetch(API);const j=await r.json();if(!j.ok)throw 0;for(const k in projs)delete projs[k];Object.assign(projs,j.projects||{});db={};ro=false;render();if(first)say("點選即自動儲存；每分鐘自動更新。")}catch(_){if(first)say("目前連不到資料表，以下為最新進度快照。")}}
+load(true);setInterval(()=>load(false),60000);
+</script>
+</body>
+</html>
