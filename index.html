@@ -173,7 +173,9 @@ function render(){
 }
 function say(t){document.getElementById("status").textContent=t}
 const API="https://script.google.com/macros/s/AKfycby_lPD-KfdBJFp7zy1o6t05lNQnMyFsqVQWLAjCMV2i6wTra1XwHD3Xlp5Q7TrL9W2urg/exec";
-async function save(path,data){const id=path.split("/")[1];const p=P.find(x=>x.id===id);try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({id,name:p?p.name:"",data})});const j=await r.json();if(!j.ok)throw new Error(j.error||"save");say("已儲存。")}catch(e){say("沒有存到，請稍後再試。");throw e}}
+let saving=0;
+async function save(path,data){saving++;try{return await save_(path,data)}finally{saving--}}
+async function save_(path,data){const id=path.split("/")[1];const p=P.find(x=>x.id===id);try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({id,name:p?p.name:"",data})});const j=await r.json();if(!j.ok)throw new Error(j.error||"save");say("已儲存。")}catch(e){say("沒有存到，請稍後再試。");throw e}}
 
 async function saveOrder(pid,order,par){const cur=projs[pid]||{};const nx={...cur,order,par:[...par],at:new Date().toISOString()};const old=projs[pid];projs[pid]=nx;render();try{await save("projects/"+pid,nx)}catch(_){projs[pid]=old;render()}}
 function domOrder(c){return [...c.children].map(x=>x.dataset.key).filter(Boolean)}
@@ -190,7 +192,7 @@ document.addEventListener("change",async e=>{const t=e.target;if(!db)return;
   if(t.dataset.rep){const id=t.dataset.rep,cur=projs[id]||{};const nx={...cur,report:t.checked,at:new Date().toISOString()};const old=projs[id];projs[id]=nx;render();try{await save("projects/"+id,nx)}catch(_){projs[id]=old;render()}}
   else if(t.dataset.note||t.dataset.own||t.dataset.help){const k=t.dataset.note||t.dataset.own||t.dataset.help;const f=t.dataset.note?"note":t.dataset.own?"owner":"help";const p=P.find(p=>p.items.some((_,i)=>key(p,i)===k));const i=p.items.findIndex((_,i)=>key(p,i)===k);const cur=full(p,i);const v=t.value.trim();if(v===cur[f])return;const nx={...cur,[f]:v,at:new Date().toISOString()};const old=items[k];items[k]=nx;render();try{await save("items/"+k,nx)}catch(_){items[k]=old;render()}}});
 render();
-async function load(first){if(dragging)return;try{const r=await fetch(API);const j=await r.json();if(!j.ok)throw 0;for(const k in projs)delete projs[k];Object.assign(projs,j.projects||{});db={};ro=false;render();if(first)say("點選即自動儲存；每分鐘自動更新。")}catch(_){if(first)say("目前連不到資料表，以下為最新進度快照。")}}
+async function load(first){if(dragging||saving)return;try{const r=await fetch(API);const j=await r.json();if(!j.ok)throw 0;if(saving)return;const sv=j.projects||{};for(const k of new Set([...Object.keys(projs),...Object.keys(sv)])){const a=projs[k],b=sv[k];if(!b)continue;if(a&&a.at&&(!b.at||a.at>b.at))continue;projs[k]=b}db={};ro=false;render();if(first)say("點選即自動儲存；每分鐘自動更新。")}catch(_){if(first)say("目前連不到資料表，以下為最新進度快照。")}}
 load(true);setInterval(()=>load(false),60000);
 </script>
 </body>
